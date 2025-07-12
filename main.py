@@ -18,7 +18,7 @@ def send_alert(message):
     url = f"https://api.telegram.org/bot{token}/sendMessage"
     requests.post(url, data={"chat_id": chat_id, "text": message})
 
-# Updated symbols with CHFJPY added, CNYJPY removed
+# Top forex and crypto symbols with CHFJPY fixed
 symbols = [
     "USDJPY=X", "GBPJPY=X", "USDCAD=X", "CHFJPY=X", "CADJPY=X", "EURGBP=X",
     "BTC-USD", "ETH-USD", "USDT-USD", "BNB-USD", "SOL-USD",
@@ -26,7 +26,7 @@ symbols = [
     "GLD"
 ]
 
-# ✅ Switched to 15-minute timeframe for faster alerts
+# ✅ 15-minute candles for faster testing
 interval = "15m"
 sma1_len = 7
 sma2_len = 20
@@ -39,12 +39,10 @@ def check_sma_strategy(symbol):
         print(f"📥 Downloading data for {symbol}...")
         df = yf.download(symbol, interval=interval, period='5d', auto_adjust=False)
 
-        # Calculate SMAs first
         df['sma1'] = df['Close'].rolling(sma1_len).mean()
         df['sma2'] = df['Close'].rolling(sma2_len).mean()
         df['sma3'] = df['Close'].rolling(sma3_len).mean()
 
-        # ✅ Skip if SMAs have NaN
         if df[['sma1', 'sma2', 'sma3']].isnull().any().any():
             print(f"⚠️ Skipping {symbol}: Not enough SMA data (NaNs still present)")
             return
@@ -86,6 +84,7 @@ def run_bot_loop():
         print("⏳ Sleeping for 3 minutes...\n")
         time.sleep(180)
 
+# ✅ Launch bot loop and Flask server correctly
 if __name__ == "__main__":
     threading.Thread(target=run_bot_loop).start()
     send_alert("🔄 Bot restarted and is now live. Monitoring SMA 7/20 crossovers vs SMA 60 on 15M candles.")
