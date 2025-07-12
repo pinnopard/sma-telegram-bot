@@ -6,8 +6,9 @@ import os
 import threading
 from flask import Flask
 
-# Start tiny Flask app to keep Render web service alive
+# Tiny Flask app to keep Render Web Service alive
 app = Flask(__name__)
+
 @app.route('/')
 def home():
     return "SMA Telegram Bot is running!"
@@ -18,6 +19,7 @@ def send_alert(message):
     url = f"https://api.telegram.org/bot{token}/sendMessage"
     requests.post(url, data={"chat_id": chat_id, "text": message})
 
+# Symbols to monitor
 symbols = [
     "USDJPY=X", "GBPJPY=X", "USDCAD=X", "CNYJPY=X", "CADJPY=X", "EURGBP=X",
     "BTC-USD", "ETH-USD", "USDT-USD", "BNB-USD", "SOL-USD",
@@ -65,4 +67,5 @@ def run_bot_loop():
 
 if __name__ == "__main__":
     threading.Thread(target=run_bot_loop).start()
+    send_alert("✅ Test alert: Your SMA Telegram Bot is working!")
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
