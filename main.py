@@ -15,10 +15,13 @@ def home():
 def send_alert(message):
     token = os.getenv("TELEGRAM_TOKEN")
     chat_id = os.getenv("CHAT_ID")
-    url = f"https://api.telegram.org/bot{token}/sendMessage"
-    requests.post(url, data={"chat_id": chat_id, "text": message})
+    if token and chat_id:
+        url = f"https://api.telegram.org/bot{token}/sendMessage"
+        requests.post(url, data={"chat_id": chat_id, "text": message})
+    else:
+        print("⚠️ Missing Telegram token or chat ID!")
 
-# ✅ Scanning top Forex + Crypto + GLD
+# ✅ Trading pairs
 symbols = [
     "USDJPY=X", "GBPJPY=X", "USDCAD=X", "CHFJPY=X", "CADJPY=X", "EURGBP=X",
     "BTC-USD", "ETH-USD", "USDT-USD", "BNB-USD", "SOL-USD",
@@ -26,7 +29,6 @@ symbols = [
     "GLD"
 ]
 
-# ✅ Using 15-minute timeframe for faster alerts
 interval = "15m"
 sma1_len = 7
 sma2_len = 20
@@ -44,7 +46,7 @@ def check_sma_strategy(symbol):
         df['sma3'] = df['Close'].rolling(sma3_len).mean()
 
         if df[['sma1', 'sma2', 'sma3']].isnull().any().any():
-            print(f"⚠️ Skipping {symbol}: Not enough SMA data (NaNs still present)")
+            print(f"⚠️ Skipping {symbol}: Not enough SMA data")
             return
 
         last = df.iloc[-1]
@@ -67,7 +69,7 @@ def check_sma_strategy(symbol):
         if crossed and (above or below):
             direction = "📈 ABOVE" if above else "📉 BELOW"
             alert_msg = f"🔔 {symbol}\nSMA 7/20 crossover {direction} SMA 60 on 15M candle @ {current_time}"
-            print(f"🚨 Triggered: {alert_msg}")
+            print(f"🚨 Alert Triggered: {alert_msg}")
             send_alert(alert_msg)
             last_alert_time[symbol] = current_time
         else:
@@ -84,8 +86,9 @@ def run_bot_loop():
         print("⏳ Sleeping for 3 minutes...\n")
         time.sleep(180)
 
-# ✅ This is the fix: daemon=True keeps scanning thread alive
+# ✅ Main execution block
 if __name__ == "__main__":
+    print("✅ Starting background SMA scanning thread...")
     threading.Thread(target=run_bot_loop, daemon=True).start()
     send_alert("🔄 Bot restarted and is now live. Monitoring SMA 7/20 crossovers vs SMA 60 on 15M candles.")
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
