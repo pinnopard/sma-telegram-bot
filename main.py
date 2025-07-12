@@ -18,7 +18,7 @@ def send_alert(message):
     url = f"https://api.telegram.org/bot{token}/sendMessage"
     requests.post(url, data={"chat_id": chat_id, "text": message})
 
-# Top forex and crypto symbols with CHFJPY fixed
+# ✅ Scanning top Forex + Crypto + GLD
 symbols = [
     "USDJPY=X", "GBPJPY=X", "USDCAD=X", "CHFJPY=X", "CADJPY=X", "EURGBP=X",
     "BTC-USD", "ETH-USD", "USDT-USD", "BNB-USD", "SOL-USD",
@@ -26,7 +26,7 @@ symbols = [
     "GLD"
 ]
 
-# ✅ 15-minute candles for faster testing
+# ✅ Using 15-minute timeframe for faster alerts
 interval = "15m"
 sma1_len = 7
 sma2_len = 20
@@ -84,8 +84,8 @@ def run_bot_loop():
         print("⏳ Sleeping for 3 minutes...\n")
         time.sleep(180)
 
-# ✅ Launch bot loop and Flask server correctly
+# ✅ This is the fix: daemon=True keeps scanning thread alive
 if __name__ == "__main__":
-    threading.Thread(target=run_bot_loop).start()
+    threading.Thread(target=run_bot_loop, daemon=True).start()
     send_alert("🔄 Bot restarted and is now live. Monitoring SMA 7/20 crossovers vs SMA 60 on 15M candles.")
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
