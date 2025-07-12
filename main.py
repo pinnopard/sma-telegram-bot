@@ -3,11 +3,23 @@ import pandas as pd
 import requests
 import time
 import os
+import threading
+from flask import Flask
 
-# === CONFIG ===
+# Start tiny Flask app to keep Render web service alive
+app = Flask(__name__)
+@app.route('/')
+def home():
+    return "SMA Telegram Bot is running!"
+
+def send_alert(message):
+    token = os.getenv("TELEGRAM_TOKEN")
+    chat_id = os.getenv("CHAT_ID")
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
+    requests.post(url, data={"chat_id": chat_id, "text": message})
+
 symbols = [
-    "JPY=X", "GBPJPY=X", "XAUUSD=X", "CAD=X",
-    "CNYJPY=X", "CADJPY=X", "EURGBP=X",
+    "USDJPY=X", "GBPJPY=X", "USDCAD=X", "CNYJPY=X", "CADJPY=X", "EURGBP=X",
     "BTC-USD", "ETH-USD", "USDT-USD", "BNB-USD", "SOL-USD",
     "XRP-USD", "DOGE-USD", "TON11419-USD", "ADA-USD", "AVAX-USD"
 ]
@@ -16,14 +28,7 @@ interval = "1h"
 sma1_len = 7
 sma2_len = 20
 sma3_len = 60
-
-telegram_token = os.getenv("TELEGRAM_TOKEN")
-chat_id = os.getenv("CHAT_ID")
 last_alert_time = {}
-
-def send_alert(message):
-    url = f"https://api.telegram.org/bot{telegram_token}/sendMessage"
-    requests.post(url, data={"chat_id": chat_id, "text": message})
 
 def check_sma_strategy(symbol):
     global last_alert_time
@@ -52,7 +57,12 @@ def check_sma_strategy(symbol):
     except Exception as e:
         print(f"Error for {symbol}:", e)
 
-while True:
-    for sym in symbols:
-        check_sma_strategy(sym)
-    time.sleep(180)
+def run_bot_loop():
+    while True:
+        for symbol in symbols:
+            check_sma_strategy(symbol)
+        time.sleep(180)
+
+if __name__ == "__main__":
+    threading.Thread(target=run_bot_loop).start()
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
