@@ -6,7 +6,6 @@ import os
 import threading
 from flask import Flask
 
-# Keep Render's web service alive
 app = Flask(__name__)
 
 @app.route('/')
@@ -19,15 +18,16 @@ def send_alert(message):
     url = f"https://api.telegram.org/bot{token}/sendMessage"
     requests.post(url, data={"chat_id": chat_id, "text": message})
 
-# Your chosen symbols (GLD used instead of XAUUSD)
+# Updated symbols with CHFJPY added, CNYJPY removed
 symbols = [
-    "USDJPY=X", "GBPJPY=X", "USDCAD=X", "CNYJPY=X", "CADJPY=X", "EURGBP=X",
+    "USDJPY=X", "GBPJPY=X", "USDCAD=X", "CHFJPY=X", "CADJPY=X", "EURGBP=X",
     "BTC-USD", "ETH-USD", "USDT-USD", "BNB-USD", "SOL-USD",
     "XRP-USD", "DOGE-USD", "TON11419-USD", "ADA-USD", "AVAX-USD",
-    "GLD"  # Gold ETF
+    "GLD"
 ]
 
-interval = "1h"
+# ✅ Switched to 15-minute timeframe for faster alerts
+interval = "15m"
 sma1_len = 7
 sma2_len = 20
 sma3_len = 60
@@ -37,12 +37,17 @@ def check_sma_strategy(symbol):
     global last_alert_time
     try:
         print(f"📥 Downloading data for {symbol}...")
-        df = yf.download(symbol, interval=interval, period='2d', auto_adjust=False)
-        df.dropna(inplace=True)
+        df = yf.download(symbol, interval=interval, period='5d', auto_adjust=False)
 
+        # Calculate SMAs first
         df['sma1'] = df['Close'].rolling(sma1_len).mean()
         df['sma2'] = df['Close'].rolling(sma2_len).mean()
         df['sma3'] = df['Close'].rolling(sma3_len).mean()
+
+        # ✅ Skip if SMAs have NaN
+        if df[['sma1', 'sma2', 'sma3']].isnull().any().any():
+            print(f"⚠️ Skipping {symbol}: Not enough SMA data (NaNs still present)")
+            return
 
         last = df.iloc[-1]
         prev = df.iloc[-2]
@@ -63,7 +68,7 @@ def check_sma_strategy(symbol):
 
         if crossed and (above or below):
             direction = "📈 ABOVE" if above else "📉 BELOW"
-            alert_msg = f"🔔 {symbol}\nSMA 7/20 crossover {direction} SMA 60 on 1H candle @ {current_time}"
+            alert_msg = f"🔔 {symbol}\nSMA 7/20 crossover {direction} SMA 60 on 15M candle @ {current_time}"
             print(f"🚨 Triggered: {alert_msg}")
             send_alert(alert_msg)
             last_alert_time[symbol] = current_time
@@ -83,5 +88,5 @@ def run_bot_loop():
 
 if __name__ == "__main__":
     threading.Thread(target=run_bot_loop).start()
-    send_alert("🔄 Bot restarted and is now live. Monitoring SMA crossovers on 1H candles.")
+    send_alert("🔄 Bot restarted and is now live. Monitoring SMA 7/20 crossovers vs SMA 60 on 15M candles.")
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
